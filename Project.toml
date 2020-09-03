@@ -1,0 +1,4 @@
+name = "XGPU"
+uuid = "6edad490-3ba7-4a60-9bfe-4f980ec7b2d7"
+authors = ["David MacMahon <davidm@astro.berkeley.edu>"]
+version = "0.1.0"
