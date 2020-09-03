@@ -383,15 +383,21 @@ The "standard" ordering for an xGPU input `Array{Complex{Tin}}` is `(P,S,F,T)`,
 where `P` is the number of polarizations (`npol`), `S` is the number of
 stations (aka antennas, `nstation`), `F` is the number of frequency channels
 (`nfrequency`), and `T` is the number of time samples (`ntime`).  The swizzle
-operation essentially performs the following sequence of operations:
+operation essentially performs the following sequence of operations, assuming
+`size(zin) == size(zout) == (P, S, F, T)`:
 
-| Operation      | Element Type  | Dimensions              |
-|:---------------|:--------------|:------------------------|
-| original input | Complex{Int8} | (P, S, F, T)            |
-| reinterpret    | Int8          | (2, P, S, F, T)         |
-| reshape        | Int8          | (2, P, S, F, 4, T/4)    |
-| permutedims    | Int8          | (4, 2, P, S, F, 4, T/4) |
-| reinterpret    | Complex{Int8} | (2, 2, P, S, F, 4, T/4) |
+| Operation      | Element Type  | Dimensions         |
+|:---------------|:--------------|:-------------------|
+| original input | Complex{Int8} | (P, S, F, T)       |
+| reinterpret    | Int8          | (2P, S, F, T)      |
+| reshape        | Int8          | (2P, S, F, 4, T/4) |
+| permutedims    | Int8          | (4, 2P, S, F, T/4) |
+| reinterpret    | Complex{Int8} | (2, 2P, S, F, T/4) |
+| reshape        | Complex{Int8} | (P, S, F, T)       |
+
+Of course, the dimensions of `zin` and `zout` are not actually changed by this
+call and can be anything so long as they contain (at least) the expected number
+of bytes, though adhering to the prescribed dimensionality is recommended.
 
 Even though the element type of the output Array is `Complex{Int8}`, they are
 really just pairs of real componnts and pairs of imaginary components rather
