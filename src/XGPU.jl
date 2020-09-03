@@ -242,7 +242,7 @@ function xgpuVersionString()::VersionNumber
 end
 
 """
-    xgpuInit(context::Context, device_flags::Int=0)::Nothing
+    xgpuInit(context::Context=Context(), device_flags::Int=0)::Context
 
 Initialize the xGPU library.
 
@@ -275,7 +275,7 @@ E.g.: `gpuInit(context, device_idx | DONT_REGISTER_ARRAY)`
 Note that if registering is disabled, the corresponding `xgpuSetHost*Buffer()`
 function _must_ be called prior to calling `xgpuCudaXengine()`.
 """
-function xgpuInit(context::Context, device_flags::Int=0)::Nothing
+function xgpuInit(context::Context=Context(), device_flags::Int=0)::Context
   # int xgpuInit(XGPUContext *context, int device_flags);
   rc = @ccall LIBXGPU.xgpuInit(context::Ref{Context},
                                device_flags::Cint)::Cint
@@ -295,7 +295,7 @@ function xgpuInit(context::Context, device_flags::Int=0)::Nothing
     end
   end
 
-  nothing
+  context
 end
 
 """
