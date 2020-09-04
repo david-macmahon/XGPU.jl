@@ -4,7 +4,6 @@ Interface to XGPU library.  See:
   - Context
   - xgpuVersionString()
   - xgpuInit()
-  - xgpuInfo()
   - xgpuFree()
   - xgpuClearDeviceIntegrationBuffer()
   - xgpuCudaXengine()
@@ -18,7 +17,6 @@ export Info
 export Context
 export xgpuVersionString
 export xgpuInit
-export xgpuInfo
 export xgpuFree
 export xgpuClearDeviceIntegrationBuffer
 export xgpuCudaXengine
