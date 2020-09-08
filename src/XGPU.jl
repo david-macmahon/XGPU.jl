@@ -419,23 +419,27 @@ negligible extra storage.
 
 The triangular order for the station pair groups are shown in this table:
 
-| Sa \\ Sb | 1 | 2 | 3 | ⋯ |
+| Sj \\ Si | 1 | 2 | 3 | ⋯ |
 |:--------:|:-:|:-:|:-:|:-:|
-|    1     | 1 | 2 | 4 | ⋯ |
-|    2     |   | 3 | 5 | ⋯ |
-|    3     |   |   | 6 | ⋯ |
-|    ⋮     |   |   |   | ⋱ |
+|    1     | 1 |   |   |   |
+|    2     | 2 | 3 |   |   |
+|    3     | 4 | 5 | 6 |   |
+|    ⋮     | ⋮ | ⋮ | ⋮ | ⋱ |
 
-The group for station 2 paired with itself (i.e. `Sa == Sb == 2`) is the third
-group.  The group for station 2 paired with station 3 (i.e. `Sa == 2, Sb == 3`)
+The group for station 2 paired with itself (i.e. `Si == Sj == 2`) is the third
+group.  The group for station 2 paired with station 3 (i.e. `Si == 2, Sj == 3`)
 is the fifth group.  Each group contains `npol^2` cross products: 1 when `npol
 == 1`, 4 when `npol == 2`.  To keep the dimensioning of the output matrix the
 same regardless of `npol`, the extra dimensionality when `npol==2` is
 flattened.
 
-When `npol == 2`, the cross products within the group for station `Sa` and
-`Sb`, with `a <= b` are ordered as: `[SaP1*SbP1, SaP2*SbP1, SaP1*SaP2,
-SaP2*SbP2]`.
+When `npol == 2`, the cross products within the group for station `Si` and
+`Sj`, with `i <= j` are ordered as:
+
+    SjP1 * conj(SiP1)
+    SjP1 * conj(SiP2)
+    SjP2 * conj(SiP1)
+    SjP2 * conj(SiP2)
 
 This function will be called automatically whenever `xgpuCudaXengine() is
 passed `SYNCOP_DUMP`, unless the caller also explicitly passes `reorder=false`.
@@ -616,7 +620,7 @@ The same index is returned regardless of the order of the two requested inputs.
 Attention to conjugation and input ordering is important.  xGPU calculates the
 correlation as:
 
-    conj(z1) * z2, where input(z1) <= input(z2)
+    (conj(z[i]) * z[j]), where i <= j
 
 This may differ from local convention.  As is always the case, conjugation
 needs to be verified in the end-to-end system to ensure proper interpretation.
