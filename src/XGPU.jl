@@ -7,6 +7,7 @@ Interface to XGPU library.  See:
   - xgpuInit()
   - xgpuFree()
   - xgpuClearDeviceIntegrationBuffer()
+  - xgpuDumpDeviceIntegrationBuffer()
   - xgpuCudaXengine()
   - xgpuReorderMatrix()
   - xgpuSwizzleInput!()
@@ -31,6 +32,7 @@ export xgpuVersionString
 export xgpuInit
 export xgpuFree
 export xgpuClearDeviceIntegrationBuffer
+export xgpuDumpDeviceIntegrationBuffer
 export xgpuCudaXengine
 export xgpuReorderMatrix
 export xgpuSwizzleInput!
@@ -349,6 +351,34 @@ function xgpuClearDeviceIntegrationBuffer(context::Context)::Nothing
       error("unexpected error $(rc)")
     end
   end
+  nothing
+end
+
+"""
+    xgpuDumpDeviceIntegrationBuffer(context::Context;
+                                    reorder::Bool=true)::Nothing
+
+Wait for all GPU transfer/compute activity to complete and then copy the
+integration buffer from device memory to host memory at `(context.matrix_h +
+context.output_offset)`.  This is provided as an alternative to passing
+SYNCOP_DUMP to xgpuCudaXengine().
+"""
+function xgpuDumpDeviceIntegrationBuffer(context::Context;
+                                         reorder::Bool=true)::Nothing
+  # int xgpuDumpDeviceIntegrationBuffer(XGPUContext *context);
+  rc = @ccall LIBXGPU.xgpuDumpDeviceIntegrationBuffer(context::Ref{Context})::Cint
+  if rc != OK
+    if rc == NOT_INITIALIZED
+      error("not initialized error")
+    else
+      error("unexpected error $(rc)")
+    end
+  end
+
+  if reorder
+    xgpuReorderMatrix(context)
+  end
+
   nothing
 end
 
