@@ -713,28 +713,29 @@ end
 """
     rawSwizzleInput!(swizout::Array{Complex{Int8}},
                      rawin::Array{Complex{Int8}, 4},
-                     tframe=1,
+                     toffset=1,
                      info::Info=xgpuinfo)::Nothing
 
 Swizzle-copy data from GUPPI RAW block `rawin` to xGPU input Array `swizout`.
 
-The GUPPI RAW block must contain an integer multiple of `xgpuinfo.ntime` time
-samples.  Each consecutive set of `xgpuinfo.ntime` time samples constitutes a
-"frame".  `tframe` specifies which frame from the GUPPI RAW block should be
-swizzle-copied into `swizout`.  After performing the swizle copy, the user will
-typically call `xgpuCudaXengine()` to initialte transfer and correlation of the
+The GUPPI RAW block may contain more that `info.ntime` time samples.  `toffset`
+specifies the starting time sample of the GUPPI raw block from which to
+swizzle-copy into `swizout`.  After performing the swizzle copy, the user will
+typically call `xgpuCudaXengine()` to initiate transfer and correlation of the
 swizzle-copied data.
 """
 function rawSwizzleInput!(swizout::Array{Complex{Int8}},
                           rawin::Array{Complex{Int8}, 4},
-                          tframe=1,
+                          toffset=1,
                           info::Info=xgpuinfo)::Nothing
   vrawin = reinterpret(Int8, rawin)
   vswizout = reinterpret(Int8, swizout)
+
   tstride = size(rawin, 2)
-  @assert(tstride % info.ntime == 0,
-          "RAW array must have multiple of $(info.ntime) time samples")
-  toffset = (tframe-1)*info.ntime
+  @assert(toffset in 1:(tstride-info.ntime),
+          "toffset $(toffset) not in 1:$(tstride-info.ntime)")
+  toffset -= 1
+
   for s=0:info.nstation-1
     for f=0:info.nfrequency-1
       for t=0:info.ntime-1
