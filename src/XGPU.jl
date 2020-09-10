@@ -756,7 +756,7 @@ swizzle-copied data.
 """
 function rawSwizzleInput!(swizout::Array{Complex{Int8}},
                           rawin::Array{Complex{Int8}, 4},
-                          toffset=1,
+                          toffset::Int=1,
                           info::Info=xgpuinfo)::Nothing
   vrawin = reinterpret(Int8, rawin)
   vswizout = reinterpret(Int8, swizout)
@@ -764,15 +764,18 @@ function rawSwizzleInput!(swizout::Array{Complex{Int8}},
   tstride = size(rawin, 2)
   @assert(toffset in 1:(tstride-info.ntime),
           "toffset $(toffset) not in 1:$(tstride-info.ntime)")
-  toffset -= 1
+
+  swizout1 = unsafe_wrap(Array, pointer(vswizout), sizeof(swizout))
+  rawin1 = unsafe_wrap(Array, pointer(vrawin, 4*(toffset-1)+1),
+                       sizeof(rawin)-4*(toffset-1))
 
   for s=0:info.nstation-1
     for f=0:info.nfrequency-1
       for t=0:info.ntime-1
         for p=0:info.npol-1
           for c=0:1
-            vswizout[((((t÷4*info.nfrequency+f)*info.nstation+s)*info.npol+p)*2+c)*4+t%4 + 1] =
-              vrawin[( ( (s*info.nfrequency+f)*tstride+(t+toffset) )*info.npol+p )*2 + c + 1];
+            @inbounds swizout1[((((t÷4*info.nfrequency+f)*info.nstation+s)*info.npol+p)*2+c)*4+t%4 + 1] =
+              rawin1[( ( (s*info.nfrequency+f)*tstride+t )*info.npol+p )*2 + c + 1];
           end
         end
       end
