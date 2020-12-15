@@ -762,8 +762,8 @@ function rawSwizzleInput!(swizout::Array{Complex{Int8}},
   vswizout = reinterpret(Int8, swizout)
 
   tstride = size(rawin, 2)
-  @assert(toffset in 1:(tstride-info.ntime),
-          "toffset $(toffset) not in 1:$(tstride-info.ntime)")
+  @assert(toffset in 1:(tstride-info.ntime+1),
+          "toffset $(toffset) not in 1:$(tstride-info.ntime+1)")
 
   swizout1 = unsafe_wrap(Array, pointer(vswizout), sizeof(swizout))
   rawin1 = unsafe_wrap(Array, pointer(vrawin, 4*(toffset-1)+1),
