@@ -744,9 +744,17 @@ end
     rawSwizzleInput!(swizout::Array{Complex{Int8}},
                      rawin::Array{Complex{Int8}, 4},
                      toffset=1,
-                     info::Info=xgpuinfo)::Nothing
+                     info::Info=xgpuinfo,
+                     rawnants::UInt32=info.nstation,
+                     rawnchan::UInt32=info.nfrequency)::Nothing
 
 Swizzle-copy data from GUPPI RAW block `rawin` to xGPU input Array `swizout`.
+The `rawnants` parameter defines the number of stations in `rawin`.  The
+`rawnchan` parameter defines the number of frequencies in `rawin`.  These may
+be less than the number of stations or frequency channels that XGPU was
+compiled for.  This allows for fewwer channels and/or fewer stations to be
+correlated than XGPU was compiled for, but XGPU will always perform the full
+correlation of the entire input buffer (even if only partially populated).
 
 The GUPPI RAW block may contain more that `info.ntime` time samples.  `toffset`
 specifies the starting time sample of the GUPPI raw block from which to
@@ -757,7 +765,9 @@ swizzle-copied data.
 function rawSwizzleInput!(swizout::Array{Complex{Int8}},
                           rawin::Array{Complex{Int8}, 4},
                           toffset::Int=1,
-                          info::Info=xgpuinfo)::Nothing
+                          info::Info=xgpuinfo,
+                          rawnants::Integer=info.nstation,
+                          rawnchan::Integer=info.nfrequency)::Nothing
   vrawin = reinterpret(Int8, rawin)
   vswizout = reinterpret(Int8, swizout)
 
@@ -769,19 +779,18 @@ function rawSwizzleInput!(swizout::Array{Complex{Int8}},
   rawin1 = unsafe_wrap(Array, pointer(vrawin, 4*(toffset-1)+1),
                        sizeof(rawin)-4*(toffset-1))
 
-  for s=0:info.nstation-1
-    for f=0:info.nfrequency-1
+  for s=0:rawnants-1
+    for f=0:rawnchan-1
       for t=0:info.ntime-1
         for p=0:info.npol-1
           for c=0:1
             @inbounds swizout1[((((t÷4*info.nfrequency+f)*info.nstation+s)*info.npol+p)*2+c)*4+t%4 + 1] =
-              rawin1[( ( (s*info.nfrequency+f)*tstride+t )*info.npol+p )*2 + c + 1];
+              rawin1[( ( (s*rawnchan+f)*tstride+t )*info.npol+p )*2 + c + 1];
           end
         end
       end
     end
   end
 end
-
 
 end # module
