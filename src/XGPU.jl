@@ -22,10 +22,16 @@ Also includes some convenience and general purpose reordering functions:
   - xgpuInputPairIndex()
   - rawSwizzleInput!()
 
+This name of XGPU library that will be used cqn be specified by
+`ENV["LIBXGPU"]` and defaults to `libxgpu` if not specified.  If
+`ENV["LIBXGPU"]` is not an absolute path name or if the `libxgpu` default is
+used, then the paths in the array `DL_LOAD_PATH` are searched first, followed
+by the system load path.
 """
 module XGPU
 
-export LIBXGPU
+using Libdl
+
 export xgpuinfo
 export Context
 export xgpuVersionString
@@ -45,8 +51,6 @@ export xgpuOutputArray
 export xgpuInputPairIndex
 export rawSwizzleInput!
 
-const LIBXGPU = "/home/davidm/local/src/xgpu/src/libxgpu.so"
-
 # Used to indicate the size and type of input data
 const INT8    = (0)
 const FLOAT32 = (1)
@@ -63,6 +67,22 @@ const DONT_REGISTER_ARRAY  = (1<<16)
 const DONT_REGISTER_MATRIX = (1<<17)
 const DONT_REGISTER        = (DONT_REGISTER_ARRAY |
                               DONT_REGISTER_MATRIX)
+
+# Create empty Dict that will map Symbols to callable function pointers.
+const LIBXGPU = Dict{Symbol, Ptr{Cvoid}}()
+
+# List of symbols for functions that we want to wrap.
+const LIBXGPU_SYMS = [
+                      :xgpuInfo,
+                      :xgpuVersionString,
+                      :xgpuInit,
+                      :xgpuFree,
+                      :xgpuClearDeviceIntegrationBuffer,
+                      :xgpuDumpDeviceIntegrationBuffer,
+                      :xgpuCudaXengine,
+                      :xgpuReorderMatrix,
+                      :xgpuSwizzleInput
+                     ]
 
 """
 Info is a mutable struct used to convey the compile-time X engine sizing
@@ -132,16 +152,31 @@ mutable struct Info
   complex_block_size::UInt
 
   """
-  Construct `Info` instance and populate it from xGPU library.
+  Construct uninitialized `Info` instance (to be populated from xGPU library).
   """
-  function Info()::Info
+  function Info()
     info = new()
-    @ccall LIBXGPU.xgpuInfo(info::Ref{Info})::Cvoid
+    # Only initialize object from library if it's loaded
+    if haskey(LIBXGPU, :xgpuInfo)
+      @ccall $(LIBXGPU[:xgpuInfo])(info::Ref{Info})::Cvoid
+    end
     info
   end
 end
 
 const xgpuinfo = Info()
+
+# Module initization function to load libxgpu at runtime
+function __init__()
+	libfile = get(ENV, "LIBXGPU", "libxgpu")
+  handle = dlopen(libfile)
+  # Look up symbols
+  for sym in LIBXGPU_SYMS
+    LIBXGPU[sym] = dlsym(handle, sym)
+  end
+  # Populate xgpuinfo
+  @ccall $(LIBXGPU[:xgpuInfo])(xgpuinfo::Ref{Info})::Cvoid
+end
 
 """
 Union of possible input types
@@ -263,7 +298,7 @@ The library version string should not be modified or freed!
 """
 function xgpuVersionString()::VersionNumber
   # const char * xgpuVersionString();
-  VersionNumber(unsafe_string(@ccall LIBXGPU.xgpuVersionString()::Cstring))
+  VersionNumber(unsafe_string(@ccall $(LIBXGPU[:xgpuVersionString])()::Cstring))
 end
 
 """
@@ -302,8 +337,8 @@ function _must_ be called prior to calling `xgpuCudaXengine()`.
 """
 function xgpuInit(context::Context=Context(), device_flags::Int=0)::Context
   # int xgpuInit(XGPUContext *context, int device_flags);
-  rc = @ccall LIBXGPU.xgpuInit(context::Ref{Context},
-                               device_flags::Cint)::Cint
+  rc = @ccall $(LIBXGPU[:xgpuInit])(context::Ref{Context},
+                                    device_flags::Cint)::Cint
   if rc != OK
     if rc == OUT_OF_MEMORY
       throw(OutOfMemoryError())
@@ -330,7 +365,7 @@ Frees library-allocated memory on host and device.
 """
 function xgpuFree(context::Context)::Nothing
   #  void xgpuFree(XGPUContext *context);
-  @ccall LIBXGPU.xgpuFree(context::Ref{Context})::Cvoid
+  @ccall $(LIBXGPU[:xgpuFree])(context::Ref{Context})::Cvoid
 end
 
 """
@@ -343,7 +378,7 @@ effectively starting a new integration.
 """
 function xgpuClearDeviceIntegrationBuffer(context::Context)::Nothing
   # int xgpuClearDeviceIntegrationBuffer(XGPUContext *context);
-  rc = @ccall LIBXGPU.xgpuClearDeviceIntegrationBuffer(context::Ref{Context})::Cint
+  rc = @ccall $(LIBXGPU[:xgpuClearDeviceIntegrationBuffer])(context::Ref{Context})::Cint
   if rc != OK
     if rc == NOT_INITIALIZED
       error("not initialized error")
@@ -366,7 +401,7 @@ SYNCOP_DUMP to xgpuCudaXengine().
 function xgpuDumpDeviceIntegrationBuffer(context::Context;
                                          reorder::Bool=true)::Nothing
   # int xgpuDumpDeviceIntegrationBuffer(XGPUContext *context);
-  rc = @ccall LIBXGPU.xgpuDumpDeviceIntegrationBuffer(context::Ref{Context})::Cint
+  rc = @ccall $(LIBXGPU[:xgpuDumpDeviceIntegrationBuffer])(context::Ref{Context})::Cint
   if rc != OK
     if rc == NOT_INITIALIZED
       error("not initialized error")
@@ -408,8 +443,8 @@ argument `reorder=false`.
 function xgpuCudaXengine(context::Context, syncop::Int;
                          reorder::Bool=true)::Nothing
   # int xgpuCudaXengine(XGPUContext *context, int syncOp);
-  rc = @ccall LIBXGPU.xgpuCudaXengine(context::Ref{Context},
-                                      syncop::Cint)::Cint
+  rc = @ccall $(LIBXGPU[:xgpuCudaXengine])(context::Ref{Context},
+                                           syncop::Cint)::Cint
   if rc != OK
     if rc == NOT_INITIALIZED
       error("not initialized")
@@ -478,7 +513,7 @@ function xgpuReorderMatrix(context::Context{Tin,Tout})::Nothing where {Tin<:Comp
   # Julia pointer arithmetic is always in bytes!
   matrix_ptr = context.matrix_h + context.output_offset * sizeof(Tout)
   # void xgpuReorderMatrix(Complex *matrix);
-  @ccall LIBXGPU.xgpuReorderMatrix(matrix_ptr::Ptr{Tout})::Cvoid
+  @ccall $(LIBXGPU[:xgpuReorderMatrix])(matrix_ptr::Ptr{Tout})::Cvoid
 end
 
 """
@@ -520,8 +555,8 @@ than being actual complex values.
 function xgpuSwizzleInput!(zout::Array{Complex{Int8}},
                             zin::Array{Complex{Int8}})::Nothing
   # void xgpuSwizzleInput(ComplexInput *out, const ComplexInput *in);
-  @ccall LIBXGPU.xgpuSwizzleInput(zout::Ref{Complex{Int8}},
-                                   zin::Ref{Complex{Int8}})::Cvoid
+  @ccall $(LIBXGPU[:xgpuSwizzleInput])(zout::Ref{Complex{Int8}},
+                                       zin::Ref{Complex{Int8}})::Cvoid
 end
 
 """
@@ -565,9 +600,9 @@ function xgpuSwizzleRawInput!(zout::Array{Complex{Int8}},
                               tstart=1,
                               tstride=size(zin,2))::Nothing
   # void xgpuSwizzleRawInput(ComplexInput *out, const ComplexInput *in, size_t tstride);
-  @ccall LIBXGPU.xgpuSwizzleRawInput(zout::Ref{Complex{Int8}},
-                                  Ref(zin,tstart)::Ref{Complex{Int8}},
-                                  tstride::Csize_t)::Cvoid
+  @ccall $(LIBXGPU[:xgpuSwizzleRawInput])(zout::Ref{Complex{Int8}},
+                                          Ref(zin,tstart)::Ref{Complex{Int8}},
+                                          tstride::Csize_t)::Cvoid
 end
 
 ### Julia code below here uses code above rather than libxgpu directly.
