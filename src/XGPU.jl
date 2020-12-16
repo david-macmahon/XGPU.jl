@@ -516,9 +516,6 @@ of bytes, though adhering to the prescribed dimensionality is recommended.
 Even though the element type of the output Array is `Complex{Int8}`, they are
 really just pairs of real componnts and pairs of imaginary components rather
 than being actual complex values.
-
-!!! warning
-    This is an experimental function that does not yet exist in public xGPU!!!
 """
 function xgpuSwizzleInput!(zout::Array{Complex{Int8}},
                             zin::Array{Complex{Int8}})::Nothing
@@ -559,6 +556,9 @@ of bytes, though adhering to the prescribed dimensionality is recommended.
 Even though the element type of the output Array is `Complex{Int8}`, they are
 really just pairs of real componnts and pairs of imaginary components rather
 than being actual complex values.
+
+!!! warning
+    This is an experimental function that does not yet exist in public xGPU!!!
 """
 function xgpuSwizzleRawInput!(zout::Array{Complex{Int8}},
                               zin::Array{Complex{Int8}},
