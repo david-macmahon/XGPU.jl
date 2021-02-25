@@ -22,7 +22,7 @@ Also includes some convenience and general purpose reordering functions:
   - xgpuInputPairIndex()
   - rawSwizzleInput!()
 
-This name of XGPU library that will be used cqn be specified by
+The name of XGPU library that will be used can be specified by
 `ENV["LIBXGPU"]` and defaults to `libxgpu` if not specified.  If
 `ENV["LIBXGPU"]` is not an absolute path name or if the `libxgpu` default is
 used, then the paths in the array `DL_LOAD_PATH` are searched first, followed
@@ -292,9 +292,7 @@ const DONT_REGISTER        = (DONT_REGISTER_ARRAY |
 """
     xgpuVersionString()::VersionNumber
 
-Get pointer to library version string.
-
-The library version string should not be modified or freed!
+Return VersionNumber correspinding to XGPU library version string.
 """
 function xgpuVersionString()::VersionNumber
   # const char * xgpuVersionString();
