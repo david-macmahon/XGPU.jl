@@ -71,17 +71,21 @@ const DONT_REGISTER        = (DONT_REGISTER_ARRAY |
 # Create empty Dict that will map Symbols to callable function pointers.
 const LIBXGPU = Dict{Symbol, Ptr{Cvoid}}()
 
-# List of symbols for functions that we want to wrap.
-const LIBXGPU_SYMS = [
-                      :xgpuInfo,
-                      :xgpuVersionString,
-                      :xgpuInit,
-                      :xgpuFree,
-                      :xgpuClearDeviceIntegrationBuffer,
-                      :xgpuDumpDeviceIntegrationBuffer,
-                      :xgpuCudaXengine,
-                      :xgpuReorderMatrix,
-                      :xgpuSwizzleInput
+# List of Tuple{Symbol, Bool} for functions that we want to wrap.  The symbol
+# gives the function name and the boolean flag indicates whethere an error
+# should be thrown if the symbol is not found (e.g. for optional/experimental
+# functions in libxgpu).
+const LIBXGPU_SYMS = Tuple{Symbol, Bool}[
+                       (:xgpuInfo,                         true),
+                       (:xgpuVersionString,                true),
+                       (:xgpuInit,                         true),
+                       (:xgpuFree,                         true),
+                       (:xgpuClearDeviceIntegrationBuffer, true),
+                       (:xgpuDumpDeviceIntegrationBuffer,  true),
+                       (:xgpuCudaXengine,                  true),
+                       (:xgpuReorderMatrix,                true),
+                       (:xgpuSwizzleInput,                 true),
+                       (:xgpuSwizzleRawInput,             false)
                      ]
 
 """
@@ -173,8 +177,8 @@ function __init__()
 	libfile = get(ENV, "LIBXGPU", "libxgpu")
   handle = dlopen(libfile)
   # Look up symbols
-  for sym in LIBXGPU_SYMS
-    LIBXGPU[sym] = dlsym(handle, sym)
+  for (sym, throw_error) in LIBXGPU_SYMS
+    LIBXGPU[sym] = dlsym(handle, sym; throw_error)
   end
   # Populate xgpuinfo
   @ccall $(LIBXGPU[:xgpuInfo])(xgpuinfo::Ref{Info})::Cvoid
@@ -599,6 +603,11 @@ function xgpuSwizzleRawInput!(zout::Array{Complex{Int8}},
                               zin::Array{Complex{Int8}},
                               tstart=1,
                               tstride=size(zin,2))::Nothing
+  # Make sure library has xgpuSwizzleRawInput function
+  if !haskey(LIBXGPU, :xgpuSwizzleRawInput)
+    @error "xgpuSwizzleRawInput not present in libxgpu"
+  end
+
   # void xgpuSwizzleRawInput(ComplexInput *out, const ComplexInput *in, size_t tstride);
   @ccall $(LIBXGPU[:xgpuSwizzleRawInput])(zout::Ref{Complex{Int8}},
                                           Ref(zin,tstart)::Ref{Complex{Int8}},
