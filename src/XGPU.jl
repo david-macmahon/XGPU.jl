@@ -814,13 +814,15 @@ function rawSwizzleInput!(swizout::Array{Complex{Int8}},
   rawin1 = unsafe_wrap(Array, pointer(vrawin, 4*(toffset-1)+1),
                        sizeof(rawin)-4*(toffset-1))
 
-  for s=0:rawnants-1
-    for f=0:rawnchan-1
+  Threads.@threads for f=0:rawnchan-1
+    for s=0:rawnants-1
       for t=0:info.ntime-1
+        offset_in = ((s*rawnchan+f)*tstride+t)*info.npol
+        offset_out = ((t÷4*info.nfrequency+f)*info.nstation+s)*info.npol
         for p=0:info.npol-1
           for c=0:1
-            @inbounds swizout1[((((t÷4*info.nfrequency+f)*info.nstation+s)*info.npol+p)*2+c)*4+t%4 + 1] =
-              rawin1[( ( (s*rawnchan+f)*tstride+t )*info.npol+p )*2 + c + 1];
+            @inbounds swizout1[((offset_out+p)*2+c)*4+t%4 + 1] =
+              rawin1[(offset_in+p)*2 + c + 1];
           end
         end
       end
