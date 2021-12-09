@@ -122,7 +122,8 @@ mutable struct Info
   """
   compute_type::UInt32
   """
-  Number of ComplexInput elements in input vector
+  Number of ComplexInput elements in input array.  xGPU refers to the input
+  array as a vector.
   """
   vecLength::UInt64
   """
@@ -130,7 +131,8 @@ mutable struct Info
   """
   vecLengthPipe::UInt64
   """
-  Number of Complex elements in output vector.
+  Number of Complex elements in output array.  xGPU refers to the output array
+  as a matrix.
   """
   matLength::UInt64
   """
@@ -785,7 +787,7 @@ Swizzle-copy data from GUPPI RAW block `rawin` to xGPU input Array `swizout`.
 The `rawnants` parameter defines the number of stations in `rawin`.  The
 `rawnchan` parameter defines the number of frequencies in `rawin`.  These may
 be less than the number of stations or frequency channels that XGPU was
-compiled for.  This allows for fewwer channels and/or fewer stations to be
+compiled for.  This allows for fewer channels and/or fewer stations to be
 correlated than XGPU was compiled for, but XGPU will always perform the full
 correlation of the entire input buffer (even if only partially populated).
 
