@@ -178,7 +178,7 @@ function __init__()
   handle = dlopen(libfile)
   # Look up symbols
   for (sym, throw_error) in LIBXGPU_SYMS
-    LIBXGPU[sym] = dlsym(handle, sym; throw_error)
+    LIBXGPU[sym] = something(dlsym(handle, sym; throw_error), C_NULL)
   end
   # Populate xgpuinfo
   @ccall $(LIBXGPU[:xgpuInfo])(xgpuinfo::Ref{Info})::Cvoid
@@ -604,7 +604,7 @@ function xgpuSwizzleRawInput!(zout::Array{Complex{Int8}},
                               tstart=1,
                               tstride=size(zin,2))::Nothing
   # Make sure library has xgpuSwizzleRawInput function
-  if !haskey(LIBXGPU, :xgpuSwizzleRawInput)
+  if LIBXGPU[:xgpuSwizzleRawInput] === C_NULL
     @error "xgpuSwizzleRawInput not present in libxgpu"
   end
 
